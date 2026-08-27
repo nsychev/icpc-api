@@ -1,0 +1,9 @@
+.gen-check/
+dist/
+.ruff_cache/
+.pytest_cache/
+.venv/
+__pycache__/
+icpc_api.egg-info/
+.generated/
+.playwright-mcp/
