@@ -71,7 +71,7 @@ class CertificateRow(HasTeamMembers, Row):
     team_name: str | None = _Field(default=None, description="Team Name")
     team_id: int | None = None
     team_members: str | None = None
-    lite_team_member_set: str | None = None
+    lite_team_member_set: list | None = None
 
 
 class ContestParticipantRow(Row):
@@ -408,7 +408,7 @@ class TeamMemberRow(HasExtraFields, Row):
     certificate_name: str | None = _Field(default=None, description="Certificate Name")
     team_id: int | None = _Field(default=None, description="Team ID")
     team_name: str | None = _Field(default=None, description="Team Name")
-    workstation_id: int | None = _Field(default=None, description="Workstation Id")
+    workstation_id: str | None = _Field(default=None, description="Workstation Id")
     team_status: TeamStatus | str | None = _Field(
         default=None, union_mode="left_to_right", description="Team Status"
     )
@@ -442,7 +442,7 @@ class TeamRow(HasTeamMembers, HasExtraFields, Row):
     paid: bool | None = _Field(default=None, description="Paid")
     note: str | None = _Field(default=None, description="Note")
     check_in: str | None = _Field(default=None, description="Check-In")
-    workstation_id: int | None = _Field(default=None, description="Workstation Id")
+    workstation_id: str | None = _Field(default=None, description="Workstation Id")
     rank: int | None = _Field(default=None, description="Rank")
     certified: bool | None = _Field(default=None, description="Certified")
     eligibility_status: EligibilityStatus | str | None = _Field(

@@ -129,7 +129,7 @@ class CertificateFields:
     team_name: Field[CertificateRow, str] = Field("teamName")
     team_id: Field[CertificateRow, int] = Field("teamId")
     team_members: Field[CertificateRow, str] = Field("teamMembers")
-    lite_team_member_set: Field[CertificateRow, str] = Field("liteTeamMemberSet")
+    lite_team_member_set: Field[CertificateRow, list] = Field("liteTeamMemberSet")
 
     #: Columns the icpc.global grid projects by default.
     default_proj: tuple[str, ...] = (
@@ -996,7 +996,7 @@ class TeamMemberFields:
     certificate_name: Field[TeamMemberRow, str] = Field("certificateName")
     team_id: Field[TeamMemberRow, int] = Field("teamId")
     team_name: Field[TeamMemberRow, str] = Field("teamName")
-    workstation_id: Field[TeamMemberRow, int] = Field("workstationId")
+    workstation_id: Field[TeamMemberRow, str] = Field("workstationId")
     team_status: Field[TeamMemberRow, TeamStatus | str] = Field("teamStatus")
     team_rank: Field[TeamMemberRow, int] = Field("teamRank")
     extra_field: Field[TeamMemberRow, str] = Field("extraField")
@@ -1106,7 +1106,7 @@ class TeamFields:
     paid: Field[TeamRow, bool] = Field("paid")
     note: Field[TeamRow, str] = Field("note")
     check_in: Field[TeamRow, str] = Field("checkIn")
-    workstation_id: Field[TeamRow, int] = Field("workstationId")
+    workstation_id: Field[TeamRow, str] = Field("workstationId")
     rank: Field[TeamRow, int] = Field("rank")
     certified: Field[TeamRow, bool] = Field("certified")
     eligibility_status: Field[TeamRow, EligibilityStatus | str] = Field("eligibilityStatus")

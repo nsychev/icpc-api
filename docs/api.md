@@ -96,7 +96,7 @@ DTO always comes back with unprojected fields null.
 row.status            # TeamStatus.ACCEPTED  (unknown values stay plain strings)
 row.created_when      # datetime(2025, 9, 24, 11, 12, 35, 787000, tzinfo=UTC)
 row.member_blobs      # [TeamMemberBlob(...)]  — the JSON-string roster, parsed
-row.extras            # {"Course": "3"}       — custom registration answers
+row.extras            # {field: response}      — extra registration fields
 row.unknown_fields()  # anything the server added since this SDK was generated
 ```
 
@@ -166,7 +166,7 @@ team.id, team.name, team.status, team.site   # , ...: team own attributes
 team.members                                 # list[Member] — all team members
 team.contestants, team.coaches, team.other   # members split by role
 team.institution                             # InstitutionRow | None
-team.extras                                  # {question: answer}
+team.extras                                  # {field: response}
 ```
 
 If there is a contestant coach, they will be present in both `coaches` and

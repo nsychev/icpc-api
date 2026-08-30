@@ -3,8 +3,7 @@
 Two search columns carry JSON encoded *as a string* rather than as nested JSON:
 
 * ``teamMembers`` on a team row — the roster, so a team listing needs no second call.
-* ``extraField`` / ``genericField`` — the answers to a contest's custom registration
-  questions, which differ per contest.
+* ``extraField`` — the answers to a contest's extra registration fields
 
 Both are parsed here into real objects, and always tolerantly: a malformed blob
 yields an empty result rather than failing the whole page.

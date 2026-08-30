@@ -36,9 +36,5 @@ class HasExtraFields:
 
     @property
     def extras(self) -> dict[str, str]:
-        """Answers to the contest's custom registration questions.
-
-        Keys are the contest's own question labels, so they differ between
-        contests and are frequently not in English.
-        """
+        """Answers to the contest's extra registration fields."""
         return parse_extra_fields(self.extra_field)
