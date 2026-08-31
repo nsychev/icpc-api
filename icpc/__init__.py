@@ -14,7 +14,7 @@ from icpc.errors import ApiError, AuthError, IcpcError, SearchError
 from icpc.facade.client import AsyncIcpc, Icpc, Include
 from icpc.facade.domain import ContestView, Member, Team
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "ApiError",
