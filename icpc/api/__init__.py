@@ -13,6 +13,6 @@ Not all endpoints are wrapped here. Please fill an issue for missing ones or use
 `icpc raw`.
 """
 
-from icpc.api import common, contest, person, public, staff, team
+from icpc.api import common, contest, person, public, staff, survey, team
 
-__all__ = ["common", "contest", "person", "public", "staff", "team"]
+__all__ = ["common", "contest", "person", "public", "staff", "survey", "team"]

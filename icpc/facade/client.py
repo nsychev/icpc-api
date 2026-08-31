@@ -17,6 +17,7 @@ from typing import Any, Self
 from icpc import errors
 from icpc.api import contest as contest_api
 from icpc.api import person as person_api
+from icpc.api import survey as survey_api
 from icpc.api import team as team_api
 from icpc.api.person import ReferenceRole
 from icpc.auth.flows import AsyncCognitoAuth, CognitoAuth, StaticTokenAuth, SyncStaticTokenAuth
@@ -25,9 +26,11 @@ from icpc.auth.tokens import TokenSet
 from icpc.config import DEFAULT_PAGE_SIZE, Settings
 from icpc.facade.domain import ContestView, join
 from icpc.models.entities import ContestReference, PersonBasic, Team
+from icpc.models.surveys import SurveyResponseRow
 from icpc.search import _generated as endpoints
 from icpc.search.dsl import Q
 from icpc.search.endpoint import SearchEndpoint
+from icpc.search.surveys import survey_responses
 from icpc.transport.async_client import AsyncTransport
 from icpc.transport.operation import Operation
 from icpc.transport.sync_client import Transport
@@ -80,10 +83,12 @@ class Include(Flag):
     INSTITUTIONS = auto()
     PARTICIPANTS = auto()
     METADATA = auto()
+    #: Every survey of the contest, and every response to each.
+    SURVEYS = auto()
 
     #: Teams, rosters, institutions and contest metadata — not the participant table.
     DEFAULT = TEAMS | MEMBERS | INSTITUTIONS | METADATA
-    ALL = TEAMS | MEMBERS | INSTITUTIONS | PARTICIPANTS | METADATA
+    ALL = TEAMS | MEMBERS | INSTITUTIONS | PARTICIPANTS | METADATA | SURVEYS
 
     @classmethod
     def named(cls, names: Iterable[str]) -> Include:
@@ -308,6 +313,19 @@ class AsyncIcpc:
     async def _all_columns[R, F](self, endpoint: SearchEndpoint[R, F]) -> list[R]:
         return await self.all(endpoint, _full(endpoint))
 
+    async def _survey_rows(self, contest_id: int) -> list[SurveyResponseRow]:
+        """Every response to every survey of a contest, in one flat list.
+
+        Two stages, because responses are keyed by survey rather than by
+        contest: list the surveys, then fetch each one's rows.
+        """
+        surveys = await self.send(survey_api.for_contest(contest_id))
+        ids = [s.id for s in surveys if s.id is not None]
+        if not ids:
+            return []
+        fetched = await asyncio.gather(*(self.all(survey_responses(i)) for i in ids))
+        return [row for rows in fetched for row in rows]
+
     # ------------------------------------------------------ joined contest --
 
     async def load_contest(
@@ -345,6 +363,11 @@ class AsyncIcpc:
                 if Include.PARTICIPANTS in include
                 else None
             )
+            surveys = (
+                group.create_task(self._survey_rows(contest_id))
+                if Include.SURVEYS in include
+                else None
+            )
 
         return join(
             teams.result(),
@@ -353,6 +376,7 @@ class AsyncIcpc:
             members=members.result() if members else (),
             institutions=institutions.result() if institutions else (),
             participants=participants.result() if participants else (),
+            survey_responses=surveys.result() if surveys else (),
         )
 
     # -------------------------------------------------------------- writes --
@@ -546,6 +570,17 @@ class Icpc:
     def _all_columns[R, F](self, endpoint: SearchEndpoint[R, F]) -> list[R]:
         return self.all(endpoint, _full(endpoint))
 
+    def _survey_rows(self, contest_id: int) -> list[SurveyResponseRow]:
+        """Every response to every survey of a contest — see
+        :meth:`AsyncIcpc._survey_rows`, of which this is the sequential twin.
+        """
+        surveys = self.send(survey_api.for_contest(contest_id))
+        rows: list[SurveyResponseRow] = []
+        for one in surveys:
+            if one.id is not None:
+                rows.extend(self.all(survey_responses(one.id)))
+        return rows
+
     # ------------------------------------------------------ joined contest --
 
     def load_contest(self, contest_id: int, include: Include = Include.DEFAULT) -> ContestView:
@@ -572,6 +607,7 @@ class Icpc:
             if Include.PARTICIPANTS in include
             else []
         )
+        surveys = self._survey_rows(contest_id) if Include.SURVEYS in include else []
         return join(
             teams,
             contest=metadata,
@@ -579,6 +615,7 @@ class Icpc:
             members=members,
             institutions=institutions,
             participants=participants,
+            survey_responses=surveys,
         )
 
     # -------------------------------------------------------------- writes --

@@ -30,6 +30,7 @@ from icpc.models.blobs import TeamMemberBlob
 from icpc.models.common import NamedRef
 from icpc.models.entities import Contest
 from icpc.models.enums import TeamStatus, coach_roles, contestant_roles
+from icpc.models.surveys import SurveyResponseRow, merge_answers
 
 __all__ = ["ContestView", "Member", "Team", "join"]
 
@@ -50,6 +51,10 @@ class Member(TeamMemberRow):
     registration_complete: bool | None = None
     #: The person's contest-wide record, when the participant table was fetched.
     participant: ContestParticipantRow | None = None
+    #: Survey answers for this person, keyed by survey field id, merged across
+    #: every survey fetched. Empty unless the surveys were asked for, and empty
+    #: for anyone who did not answer.
+    survey: dict[str, str] = Field(default_factory=dict)
 
 
 class Team(TeamRow):
@@ -137,6 +142,7 @@ def _member_from_row(row: TeamMemberRow) -> Member:
         **_columns(row),
         registration_complete=row.complete_registration,
         participant=None,
+        survey={},
     )
 
 
@@ -147,6 +153,7 @@ def _member_from_blob(blob: TeamMemberBlob) -> Member:
         role=blob.role,
         registration_complete=blob.reg_complete,
         participant=None,
+        survey={},
     )
 
 
@@ -158,14 +165,18 @@ def join(
     members: Iterable[TeamMemberRow] = (),
     institutions: Iterable[InstitutionRow] = (),
     participants: Iterable[ContestParticipantRow] = (),
+    survey_responses: Iterable[SurveyResponseRow] = (),
 ) -> ContestView:
     """Build a :class:`ContestView` from raw search rows.
 
     When ``members`` is empty the roster falls back to each team row's embedded
     ``teamMembers`` blob, which is thinner but costs no extra request.
+
+    ``survey_responses`` may hold the rows of several surveys at once.
     """
     by_inst = {row.inst_id: row for row in institutions if row.inst_id is not None}
     by_person = {row.person_id: row for row in participants if row.person_id is not None}
+    answers = merge_answers(survey_responses)
 
     rosters: dict[int, list[Member]] = {}
     for row in members:
@@ -181,6 +192,7 @@ def join(
         for member in roster:
             if member.person_id is not None:
                 member.participant = by_person.get(member.person_id)
+                member.survey = answers.get(member.person_id, {})
         built.append(
             Team.model_construct(
                 **_columns(row),

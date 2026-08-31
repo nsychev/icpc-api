@@ -96,6 +96,10 @@ ignore = ["ANN401", "PLR0913"]
 python-version = "3.12"
 root = ["."]
 
+# ty can't check types against inline dependencies in the examples
+[tool.ty.src]
+exclude = ["examples"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

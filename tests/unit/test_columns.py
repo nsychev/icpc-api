@@ -13,6 +13,7 @@ from icpc.cli.columns import (
     pluck,
     resolve_columns,
     rows_of,
+    source_of,
     tables_for,
     validate,
 )
@@ -208,6 +209,7 @@ def test_the_field_listing_needs_no_contest():
         "institutions",
         "members",
         "participants",
+        "surveys",
     }
 
 
@@ -312,3 +314,16 @@ def test_include_named_says_what_the_tables_are(name):
     """A lookup by attribute would answer the same for a typo and for a method."""
     with pytest.raises(ValueError, match="pick from teams, members"):
         Include.named([name])
+
+
+def test_a_survey_column_is_open_and_reads_the_surveys_table():
+    """Answers are keyed by survey field id, so anything under `survey.` goes."""
+    validate(RowKind.MEMBERS, "survey.1134")
+    validate(RowKind.TEAMS, "contestants[0].survey.1134")
+    assert source_of(RowKind.MEMBERS, "survey.1134") == "surveys"
+
+
+def test_surveys_are_fetched_only_for_a_survey_column():
+    """Every survey costs its own paged fetch, so it must not be on by default."""
+    assert "surveys" not in tables_for(RowKind.MEMBERS, ["firstName"])
+    assert "surveys" in tables_for(RowKind.MEMBERS, ["survey.1134"])

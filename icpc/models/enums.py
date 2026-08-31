@@ -19,6 +19,8 @@ __all__ = [
     "PublicPagesVisibility",
     "Sex",
     "ShirtSize",
+    "SurveyFieldType",
+    "SurveyVisibility",
     "TeamStatus",
     "Title",
     "coach_roles",
@@ -118,6 +120,38 @@ class PublicPagesVisibility(StrEnum):
 
     WITH_PEOPLE = "WITH_PEOPLE"
     WITHOUT_PEOPLE = "WITHOUT_PEOPLE"
+
+
+class SurveyVisibility(StrEnum):
+    """Who a survey is shown to.
+
+    Complete, from ``…contest.businessobjects.survey.Survey``.
+
+    ``TEAMSACCPTED`` is the server-side typo.
+    """
+
+    ALL = "ALL"
+    STAFF = "STAFF"
+    TEAMSACCPTED = "TEAMSACCPTED"
+    TEAMS = "TEAMS"
+
+
+class SurveyFieldType(StrEnum):
+    """What one survey field asks for.
+
+    Complete, from ``…contest.businessobjects.survey.SurveyField``; the six match
+    the constants in the frontend's survey renderer.
+
+    ``DESCRIPTION`` is static text rather than a question, and never carries an
+    answer.
+    """
+
+    DESCRIPTION = "DESCRIPTION"
+    SHORT_ANSWER = "SHORT_ANSWER"
+    LONG_ANSWER = "LONG_ANSWER"
+    DROPDOWN = "DROPDOWN"
+    CHECKBOXES = "CHECKBOXES"
+    USERSLIST = "USERSLIST"
 
 
 class Title(StrEnum):

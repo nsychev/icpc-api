@@ -13,10 +13,10 @@ import typing
 
 import pytest
 
-from icpc.api import common, contest, person, public, staff, team
+from icpc.api import common, contest, person, public, staff, survey, team
 from icpc.transport.operation import Operation
 
-MODULES = [common, contest, person, public, staff, team]
+MODULES = [common, contest, person, public, staff, survey, team]
 
 
 def _is_mapping(annotation: object) -> bool:

@@ -87,6 +87,7 @@ def _member(member: Member) -> dict[str, Any]:
         row["completeRegistration"] = member.registration_complete
     row["participant"] = _dump(member.participant)
     row["extras"] = member.extras
+    row["survey"] = member.survey
     return row
 
 
@@ -239,6 +240,7 @@ def _member_shape() -> Fields:
         **_from_model(TeamMemberRow),
         "participant": _from_model(ContestParticipantRow),
         "extras": Open,
+        "survey": Open,
     }
 
 
@@ -321,6 +323,7 @@ _NEEDS = {
     "participant": "participants",
     "contest": "metadata",
     "siteId": "metadata",
+    "survey": "surveys",
 }
 
 

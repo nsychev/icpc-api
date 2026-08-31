@@ -21,6 +21,7 @@ from icpc.api import contest as contest_api
 from icpc.api import person as person_api
 from icpc.api import public as public_api
 from icpc.api import staff as staff_api
+from icpc.api import survey as survey_api
 from icpc.api import team as team_api
 from icpc.api.person import ReferenceRole
 from icpc.api.team import NewTeam, NewTeamMember
@@ -45,6 +46,7 @@ from icpc.models.enums import ExportType, MemberRole, TeamStatus
 from icpc.search import _generated as endpoints
 from icpc.search.dsl import Filter, SortKey
 from icpc.search.endpoint import SearchEndpoint
+from icpc.search.surveys import survey_responses
 from icpc.transport.operation import Request, json_op
 
 app = typer.Typer(no_args_is_help=True, help=__doc__, add_completion=True)
@@ -54,12 +56,14 @@ team_app = typer.Typer(no_args_is_help=True, help="Read and modify teams.")
 public_app = typer.Typer(no_args_is_help=True, help="Public endpoints; no login needed.")
 person_app = typer.Typer(no_args_is_help=True, help="Look people up.")
 staff_app = typer.Typer(no_args_is_help=True, help="Contest staff.")
+survey_app = typer.Typer(no_args_is_help=True, help="Contest surveys and their answers.")
 app.add_typer(auth_app, name="auth")
 app.add_typer(contest_app, name="contest")
 app.add_typer(team_app, name="team")
 app.add_typer(public_app, name="public")
 app.add_typer(person_app, name="person")
 app.add_typer(staff_app, name="staff")
+app.add_typer(survey_app, name="survey")
 
 
 @dataclass
@@ -402,6 +406,64 @@ def staff_remove(ctx: typer.Context, staff_member_id: int) -> None:
     with _client(ctx) as icpc:
         icpc.send(staff_api.delete(staff_member_id))
     note(f"staff member {staff_member_id} removed")
+
+
+# ------------------------------------------------------------------ survey --
+
+
+@survey_app.command("list")
+def survey_list(ctx: typer.Context, contest_id: int) -> None:
+    """Surveys of a contest.
+
+    Most contests have none. `visibility` says who the survey was put to, but
+    the answers come back per person either way.
+    """
+    with _client(ctx) as icpc:
+        rows = icpc.send(survey_api.for_contest(contest_id))
+    if not rows:
+        warn(f"contest {contest_id} has no surveys")
+    render(
+        rows,
+        _ctx(ctx).output,
+        columns=["id", "name", "visibility", "responses", "acceptsResponses", "surveyEndDate"],
+    )
+
+
+@survey_app.command("fields")
+def survey_fields(ctx: typer.Context, survey_id: int) -> None:
+    """Questions of a survey, in display order.
+
+    This is the lookup that decodes an answer: responses and `contest load`
+    columns are keyed by the `id` shown here. A `DESCRIPTION` row is static text
+    rather than a question, so it never carries an answer.
+    """
+    with _client(ctx) as icpc:
+        rows = icpc.send(survey_api.fields(survey_id))
+    render(rows, _ctx(ctx).output, columns=["id", "type", "name", "hint", "defaultValue"])
+
+
+@survey_app.command("responses")
+def survey_responses_cmd(ctx: typer.Context, survey_id: int) -> None:
+    """Answers to a survey, one row per person who replied.
+
+    Answer columns are named by field id — `icpc survey fields` maps them back to
+    the questions. The server ignores `filter:` here, so narrowing is a job for
+    the shell.
+
+        icpc -o csv survey responses 894
+    """
+    endpoint = survey_responses(survey_id)
+    with _client(ctx) as icpc:
+        rows = icpc.all(endpoint)
+    if not rows:
+        warn(f"survey {survey_id} has no responses")
+    columns = list(endpoint.all_fields)
+    seen: list[str] = []
+    for row in rows:
+        for key in row.answers:
+            if key not in seen:
+                seen.append(key)
+    render(rows, _ctx(ctx).output, columns=columns + sorted(seen, key=int))
 
 
 # ----------------------------------------------------------------- contest --

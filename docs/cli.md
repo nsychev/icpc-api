@@ -423,6 +423,39 @@ printed on the badge and the certificate.
 
 ---
 
+## survey
+
+A survey is a contest-wide questionnaire.
+
+```bash
+icpc survey list 1234             # surveys of a contest
+icpc survey fields 123            # the questions of a survey
+icpc -o csv survey responses 123  # all survey responses
+```
+
+```
+$ icpc survey list 1234
+[{"id": 123, "name": "Dietary Restrictions", "visibility": "ALL",
+  "responses": 706, "acceptsResponses": false, "surveyEndDate": "2026-01-01"}]
+```
+
+```
+$ icpc survey fields 123
+[{"id": 5678, "type": "SHORT_ANSWER", "name": "List your dietary needs"}, ...]
+```
+
+`contest load` can include survey answers as a column — see
+[contest load](#contest-load):
+
+```bash
+icpc -o csv contest load 9159 --rows members \
+    --col username --col Course=survey.5678
+```
+
+Use field ID to retrieve the value.
+
+---
+
 ## my-contests
 
 The contests you have access to — what the icpc.global cabinet lists on its front

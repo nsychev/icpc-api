@@ -24,10 +24,13 @@ from icpc.models.enums import (
     ExportType,
     MemberRole,
     ParticipantRole,
+    SurveyFieldType,
+    SurveyVisibility,
     TeamStatus,
     coach_roles,
     contestant_roles,
 )
+from icpc.models.surveys import Survey, SurveyField, SurveyResponseRow
 
 __all__ = [
     "CertificateRow",
@@ -45,6 +48,11 @@ __all__ = [
     "StaffRow",
     "StaffTshirtRow",
     "StandingsRow",
+    "Survey",
+    "SurveyField",
+    "SurveyFieldType",
+    "SurveyResponseRow",
+    "SurveyVisibility",
     "TeamMemberBlob",
     "TeamMemberRow",
     "TeamRow",

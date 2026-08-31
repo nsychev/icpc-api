@@ -46,6 +46,7 @@ from icpc.search._generated import (
 from icpc.search.dsl import Direction, Filter, FilterMode, Q, SortKey
 from icpc.search.endpoint import SearchEndpoint
 from icpc.search.fields import Field
+from icpc.search.surveys import SurveyResponseFields, survey_responses
 
 __all__ = [
     "CertificateFields",
@@ -64,6 +65,7 @@ __all__ = [
     "StaffMemberFields",
     "StaffTshirtFields",
     "StandingsFields",
+    "SurveyResponseFields",
     "TeamFields",
     "TeamMemberFields",
     "TeamSummaryFields",
@@ -96,4 +98,5 @@ __all__ = [
     "site_team_certificates",
     "site_team_members",
     "site_teams",
+    "survey_responses",
 ]

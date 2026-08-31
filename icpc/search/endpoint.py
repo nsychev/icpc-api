@@ -33,6 +33,10 @@ class SearchEndpoint[RowT, FieldsT]:
     #: Every column the endpoint understands.
     all_fields: tuple[str, ...]
     name: str
+    #: Whether the server honours ``filter:`` here at all. False for the handful
+    #: of grids that accept the term and return everything anyway — see
+    #: :meth:`validate`.
+    filterable: bool = True
 
     # ------------------------------------------------------------ queries --
 
@@ -66,6 +70,9 @@ class SearchEndpoint[RowT, FieldsT]:
     def validate(self, q: Q) -> None:
         """Refuse a query the server would reject or, worse, quietly misanswer."""
         self.validate_proj(q.proj)
+
+        if q.filters and not self.filterable:
+            raise SearchError(f"Server does not support filters for endpoint {self.name}.")
 
         # Filtering and sorting apply *only* to columns present in the projection.
         # A filter on an unprojected column is ignored without a word and the full

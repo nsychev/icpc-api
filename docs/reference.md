@@ -94,6 +94,17 @@ Contest staff — people attached to a site with a badge role.
 | `staff.get` | `GET /contest/staffmember/{staff_member_id}` | `StaffMemberRow` | One staff member. |
 
 
+## Surveys
+
+A contest's questionnaires and the questions they ask.
+
+| Call | Endpoint | Returns | What it does |
+|---|---|---|---|
+| `survey.fields` | `GET /contest/survey/field/{survey_id}/table` | `list[SurveyField]` | A survey's questions, in `fieldOrder`. |
+| `survey.for_contest` | `GET /contest/survey/{contest_id}/table` | `list[Survey]` | Every survey of a contest. Empty for most: surveys are opt-in. |
+| `survey.get` | `GET /contest/survey/{survey_id}` | `Survey` | One survey, by its own id rather than its contest's. |
+
+
 ## Common
 
 Site-wide values, institution lookup, and the schema registry.
