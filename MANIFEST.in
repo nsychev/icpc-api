@@ -1,2 +1,4 @@
 graft tests
 include uv.lock
+global-exclude *.py[cod]
+prune **/__pycache__

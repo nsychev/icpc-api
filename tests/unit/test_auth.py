@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import time
+from pathlib import Path
 
 import httpx
 import pytest
 
 from icpc import errors
+from icpc.auth import store as store_module
 from icpc.auth.flows import CognitoAuth
 from icpc.auth.store import PASSWORD_KEY, CredentialStore
 from icpc.auth.tokens import TokenSet, decode_jwt_claims
@@ -22,6 +25,15 @@ def make_jwt(email: str, exp: float) -> str:
         return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
     return f"{part({'alg': 'RS256'})}.{part({'email': email, 'exp': exp})}.signature"
+
+
+def _raise(error: BaseException):
+    """A stand-in that fails, for the failure paths of the credential store."""
+
+    def fail(*_args: object, **_kwargs: object) -> None:
+        raise error
+
+    return fail
 
 
 def cognito(responses: list[dict], seen: list[dict] | None = None) -> CognitoAuth:
@@ -200,8 +212,9 @@ def test_store_round_trips_tokens_and_is_private(tmp_path):
     assert account.tokens == tokens
     assert account.password is None
     assert account.can_renew is False
-    # Credentials; the file must not be readable by anyone else.
-    assert (tmp_path / "credentials.json").stat().st_mode & 0o077 == 0
+    # Credentials; the file must not be readable by anyone else on UNIX.
+    if os.name == "posix":
+        assert (tmp_path / "credentials.json").stat().st_mode & 0o077 == 0
 
 
 def test_password_round_trips_and_enables_renewal(tmp_path):
@@ -305,6 +318,42 @@ def test_store_delete_removes_the_password_too(tmp_path):
     assert store.load("u@example.com") is None
     assert PASSWORD_KEY not in path.read_text()
     assert store.delete("u@example.com") is False
+
+
+def test_store_writes_on_a_platform_without_fchmod(tmp_path, monkeypatch):
+    # Windows has no POSIX permission bits, and no `os.fchmod` at all before
+    # 3.13. Saving credentials must not depend on either being there.
+    monkeypatch.delattr(os, "fchmod", raising=False)
+
+    store = CredentialStore(tmp_path / "credentials.json")
+    store.save_tokens(TokenSet(id_token="i", username="u@example.com"))
+    store.save_password("u@example.com", "password")
+
+    account = store.load("u@example.com")
+    assert account is not None
+    assert account.password == "password"
+
+
+def test_a_failed_write_leaves_no_temp_file_behind(tmp_path, monkeypatch):
+    store = CredentialStore(tmp_path / "credentials.json")
+    monkeypatch.setattr(store_module, "_restrict", _raise(RuntimeError("write failed")))
+
+    with pytest.raises(RuntimeError, match="write failed"):
+        store.save_tokens(TokenSet(id_token="i", username="u@example.com"))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_a_failed_write_reports_its_own_error_not_the_cleanup_failure(tmp_path, monkeypatch):
+    # On Windows we don't want to get "the process cannot access the file because it is being
+    # used by another process" instead of a real error.
+    store = CredentialStore(tmp_path / "credentials.json")
+    monkeypatch.setattr(store_module, "_restrict", _raise(RuntimeError("write failed")))
+    monkeypatch.setattr(
+        Path, "unlink", _raise(PermissionError(32, "The process cannot access the file"))
+    )
+
+    with pytest.raises(RuntimeError, match="write failed"):
+        store.save_tokens(TokenSet(id_token="i", username="u@example.com"))
 
 
 def test_missing_or_corrupt_store_is_not_an_error(tmp_path):

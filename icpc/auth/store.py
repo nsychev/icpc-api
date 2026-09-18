@@ -1,26 +1,20 @@
 """On-disk credential store.
 
 Credentials live in ``~/.config/icpc/credentials.json`` (or under
-``$XDG_CONFIG_HOME``), mode 0600 in a 0700 directory, keyed by username so more
-than one account can be cached without a profile concept. One account is the
-default — the one most recently logged in — so having several cached is never
-ambiguous.
+``$XDG_CONFIG_HOME``), mode 0600 in a 0700 directory. On Windows, where there
+are no mode bits, the file inherits the ACL of the per-user config directory.
 
 The file holds the Cognito tokens and, optionally, the account password.
 
-**The password is stored base64-encoded, which is obfuscation and not encryption.**
-Anyone who can read the file can recover it in one step. It is stored at all
-because this Cognito app client rejects ``REFRESH_TOKEN_AUTH``: the id token dies
-after an hour and SRP needs the plaintext password to mint another, so an
-unattended job has no other way to carry on. The alternative in practice is
-``ICPC_PASSWORD=…`` on a command line, which additionally leaks into shell
-history and every child process.
+icpc.global Cognito rejects ``REFRESH_TOKEN_AUTH``, so the ID Token validity is
+one hour. To renew it unattended, we store the password in the plaintext.
 """
 
 from __future__ import annotations
 
 import base64
 import binascii
+import contextlib
 import json
 import os
 import tempfile
@@ -100,16 +94,17 @@ class CredentialStore:
         fd, tmp_name = tempfile.mkstemp(dir=self.path.parent, prefix=".credentials-")
         tmp = Path(tmp_name)
         try:
-            os.fchmod(fd, 0o600)
-            if default not in accounts:
-                default = None
-            payload = {"version": VERSION, "default": default, "accounts": accounts}
+            # We need to close the file before trying to clean it up.
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                _restrict(handle.fileno())
+                if default not in accounts:
+                    default = None
+                payload = {"version": VERSION, "default": default, "accounts": accounts}
                 json.dump(payload, handle, indent=2)
             # Write-then-rename, so a crash cannot leave a truncated file behind.
             tmp.replace(self.path)
         except BaseException:
-            tmp.unlink(missing_ok=True)
+            _discard(tmp)
             raise
 
     # ------------------------------------------------------------ accounts --
@@ -212,6 +207,28 @@ class CredentialStore:
     def usernames(self) -> list[str]:
         accounts, _ = self._read()
         return sorted(accounts)
+
+
+def _restrict(fd: int) -> None:
+    """Make the open temp file readable by its owner only.
+
+    On Windows, there is no POSIX bits, so don't do anything there.
+    """
+    fchmod = getattr(os, "fchmod", None)
+    if fchmod is None:
+        return
+    try:
+        fchmod(fd, 0o600)
+    except (NotImplementedError, OSError):
+        # Windows implementation of `os.fchmod` has only read-only flag in 3.13.
+        if os.name == "posix":
+            raise
+
+
+def _discard(tmp: Path) -> None:
+    """Remove a half-written temp file, best effort."""
+    with contextlib.suppress(OSError):
+        tmp.unlink(missing_ok=True)
 
 
 def _decode(value: object) -> str | None:
