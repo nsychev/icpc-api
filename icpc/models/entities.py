@@ -13,6 +13,7 @@ from icpc.models.common import Country, NamedRef
 from icpc.models.enums import (
     ContestType,
     EligibilityStatus,
+    InstitutionUnitType,
     MemberRole,
     PublicPagesVisibility,
     Sex,
@@ -33,7 +34,9 @@ __all__ = [
     "Degree",
     "Eligibility",
     "Globals",
+    "Institution",
     "InstitutionSuggestion",
+    "InstitutionUnit",
     "InstitutionUnitAssignment",
     "Person",
     "PersonBasic",
@@ -47,6 +50,7 @@ __all__ = [
     "SiteRow",
     "SiteTreeNode",
     "StandingRow",
+    "SuggestedInstitution",
     "Team",
     "TeamAction",
     "TeamFile",
@@ -504,6 +508,68 @@ class InstitutionSuggestion(Row):
     abbr: str | None = None
     url: str | None = None
     country: str | None = None
+
+
+class Institution(Row):
+    """``GET /common/institution/{id}`` — the ``instId`` of the search grids."""
+
+    id: int
+    version: int
+    name: str | None = None
+    abbreviation: str | None = None
+    native_name: str | None = None
+    short_name: str | None = None
+    homepage_url: str | None = None
+    preserve_changes: bool | None = None
+
+
+class SocialInfo(Row):
+    id: int | None = None
+    version: int | None = None
+    twitter_name: str | None = None
+    twitter_hash: str | None = None
+    facebook_page: str | None = None
+    social_info: str | None = None
+
+
+class InstitutionUnit(Row):
+    """``GET /common/institutionunit/{id}`` — the ``instUnitId`` of the search grids.
+
+    An institution usually has exactly one unit, repeating its names.
+    """
+
+    id: int
+    version: int
+    federal_tax_id: str | None = None
+    longitude: float | None = None
+    latitude: float | None = None
+    name: str | None = None
+    abbreviation: str | None = None
+    native_name: str | None = None
+    short_name: str | None = None
+    homepage_url: str | None = None
+    #: The one snake_case key on the wire.
+    institution_id: int | None = Field(default=None, alias="institution_id")
+    preserve_changes: bool | None = None
+    institution_unit_type: InstitutionUnitType | str | None = Field(
+        default=None, union_mode="left_to_right"
+    )
+    mailing_address: ShippingAddress | None = None
+    social_info: SocialInfo | None = None
+
+
+class SuggestedInstitution(Row):
+    """``POST /common/suggestedinstitution/`` — a new institution, pending review."""
+
+    id: int | None = None
+    version: int | None = None
+    name: str | None = None
+    short_name: str | None = None
+    homepage_url: str | None = None
+    institution_unit_type: InstitutionUnitType | str | None = Field(
+        default=None, union_mode="left_to_right"
+    )
+    mailing_address: ShippingAddress | None = None
 
 
 class ContestReference(Row):

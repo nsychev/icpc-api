@@ -6,11 +6,14 @@ client exists.
 
 from __future__ import annotations
 
+import copy
 import os
+import re
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any
 
 import typer
@@ -42,10 +45,12 @@ from icpc.cli.columns import (
 from icpc.cli.render import OutputFormat, fail, note, render, warn
 from icpc.config import Settings
 from icpc.facade.client import Icpc, Include
-from icpc.models.enums import ExportType, MemberRole, TeamStatus
+from icpc.models.countries import country
+from icpc.models.enums import ExportType, InstitutionUnitType, MemberRole, TeamStatus
 from icpc.search import _generated as endpoints
 from icpc.search.dsl import Filter, SortKey
 from icpc.search.endpoint import SearchEndpoint
+from icpc.search.institutions import institutions
 from icpc.search.surveys import survey_responses
 from icpc.transport.operation import Request, json_op
 
@@ -57,6 +62,7 @@ public_app = typer.Typer(no_args_is_help=True, help="Public endpoints; no login 
 person_app = typer.Typer(no_args_is_help=True, help="Look people up.")
 staff_app = typer.Typer(no_args_is_help=True, help="Contest staff.")
 survey_app = typer.Typer(no_args_is_help=True, help="Contest surveys and their answers.")
+institution_app = typer.Typer(no_args_is_help=True, help="Find and edit institutions.")
 app.add_typer(auth_app, name="auth")
 app.add_typer(contest_app, name="contest")
 app.add_typer(team_app, name="team")
@@ -64,6 +70,7 @@ app.add_typer(public_app, name="public")
 app.add_typer(person_app, name="person")
 app.add_typer(staff_app, name="staff")
 app.add_typer(survey_app, name="survey")
+app.add_typer(institution_app, name="institution")
 
 
 @dataclass
@@ -79,12 +86,16 @@ def _ctx(ctx: typer.Context) -> Context:
 def _client(ctx: typer.Context) -> Icpc:
     """Build a client from whatever credentials are available.
 
-    An explicit token in the environment wins, so CI and one-off shells do not
-    need a login; otherwise the tokens cached by ``icpc auth login`` are used.
+    Looks up in the following order:
+    - `ICPC_ID_TOKEN` or `ICPC_REFRESH_TOKEN` environment variables
+    - `ICPC_USERNAME` and `ICPC_PASSWORD` variables
+    - credentials stored with `icpc auth login`
     """
     state = _ctx(ctx)
     if os.environ.get("ICPC_ID_TOKEN") or os.environ.get("ICPC_REFRESH_TOKEN"):
         return Icpc.from_token()
+    if os.environ.get("ICPC_PASSWORD"):
+        return Icpc.from_password(state.username)
     return Icpc.from_store(state.username)
 
 
@@ -334,7 +345,7 @@ def person_show(ctx: typer.Context, person_id: int) -> None:
         render(icpc.send(person_api.get(person_id)), _ctx(ctx).output)
 
 
-@app.command("institution")
+@institution_app.command("find")
 def institution_find(
     ctx: typer.Context,
     name: Annotated[str, typer.Argument(help="Institution name; three characters or more.")],
@@ -346,8 +357,8 @@ def institution_find(
     """Find an institution id, for registering a team.
 
     The id printed here is the one `team register --institution` wants. It is a
-    different number from the `instId` and `instUnitId` columns of the
-    `institutions` grid, which point at other tables.
+    different number from the `instId` and `instUnitId` columns of
+    `institution search`, which point at other tables.
     """
     with _client(ctx) as icpc:
         rows = icpc.send(common_api.institution_suggest(name, size=limit))
@@ -358,6 +369,166 @@ def institution_find(
         _one_id(ctx, list(rows), name)
         return
     render(rows, _ctx(ctx).output, columns=["id", "name", "country", "url"])
+
+
+@institution_app.command("search")
+def institution_search(
+    ctx: typer.Context,
+    name: Annotated[str | None, typer.Argument(help="Substring of instName.")] = None,
+    filter_: Annotated[
+        list[str] | None, typer.Option("--filter", help="COLUMN#VALUE, repeatable.")
+    ] = None,
+    limit: Annotated[int, typer.Option("--limit", help="Stop after this many rows.")] = 20,
+) -> None:
+    """Search every institution, as the admin grid does.
+
+        icpc institution search Massachusetts --filter countryName#"United States"
+
+    `instId` is what `institution show` and `set` take; `instUnitId` is what
+    `unit` and `set-unit` take.
+    """
+    endpoint = institutions()
+    raw = ([f"instName#{name}"] if name else []) + (filter_ or [])
+    q = endpoint.query(filters=_parse_filters(raw))
+    with _client(ctx) as icpc:
+        rows = icpc.all(endpoint, q, max_rows=limit)
+    render(rows, _ctx(ctx).output, columns=list(q.proj))
+
+
+#: Keys of `institution create`: top-level, then the ones that go in mailingAddress.
+_NEW_INSTITUTION = ("name", "shortName", "homepageUrl", "institutionUnitType")
+_NEW_ADDRESS = ("addressLine1", "addressLine2", "addressLine3", "city", "state", "zip", "country")
+
+
+@institution_app.command("set-logo")
+def institution_set_logo(
+    ctx: typer.Context,
+    institution_id: int,
+    path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="The image file.")],
+) -> None:
+    """Upload an institution's logo, by instId: SVG, JPEG, BMP, PNG or GIF, under 3000 kB.
+
+    icpc institution set-logo 1145 mit.svg
+    """
+    content = path.read_bytes()
+    try:
+        mime = common_api.logo_mime(path.name, len(content))
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from None
+    with _client(ctx) as icpc:
+        icpc.send(common_api.set_institution_logo(institution_id, path.name, content, mime))
+    note(f"logo of institution {institution_id} set from {path}")
+
+
+@institution_app.command("create")
+def institution_create(
+    ctx: typer.Context,
+    fields: Annotated[list[str], typer.Argument(help="KEY=VALUE; see below.")],
+) -> None:
+    """Suggest a new institution, as the "can't find my institution" form does.
+
+        icpc institution create "name=Massachusetts Institute of Technology" "shortName=MIT" \\
+            homepageUrl=https://web.mit.edu/ institutionUnitType=UNIVERSITY_GRADUATE \\
+            "addressLine1=77 Massachusetts Avenue" city=Cambridge state=MA zip=02139 country=US
+
+    Keys: name, shortName, homepageUrl, institutionUnitType (HIGH_SCHOOL,
+    UNIVERSITY_NO_GRADUATE, UNIVERSITY_GRADUATE), addressLine1-3, city, state,
+    zip, country (ISO code or name). Values stay strings, so zip=01234 is kept.
+    """
+    values: dict[str, str] = {}
+    for pair in fields:
+        key, sep, value = pair.partition("=")
+        if not sep or key not in _NEW_INSTITUTION + _NEW_ADDRESS:
+            raise typer.BadParameter(
+                f"expected KEY=VALUE with KEY one of {', '.join(_NEW_INSTITUTION + _NEW_ADDRESS)};"
+                f" got {pair!r}"
+            )
+        values[key] = value
+    missing = [k for k in (*_NEW_INSTITUTION, "country") if not values.get(k)]
+    if missing:
+        raise typer.BadParameter(f"missing {', '.join(missing)}")
+    try:
+        InstitutionUnitType(values["institutionUnitType"])
+        values["country"] = country(values["country"]).model_dump(by_alias=True)  # type: ignore[assignment]
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from None
+    body: dict[str, object] = {k: values[k] for k in _NEW_INSTITUTION}
+    body["mailingAddress"] = {k: values[k] for k in _NEW_ADDRESS if k in values}
+    with _client(ctx) as icpc:
+        render(icpc.send(common_api.create_suggested_institution(body)), _ctx(ctx).output)
+
+
+@institution_app.command("approve")
+def institution_approve(
+    ctx: typer.Context,
+    suggestion_id: Annotated[int, typer.Argument(help="The id `institution create` printed.")],
+) -> None:
+    """Approve a suggested institution, turning it into a real one. Needs a moderator."""
+    with _client(ctx) as icpc:
+        icpc.send(common_api.approve_suggested_institution(suggestion_id))
+    note(f"suggested institution {suggestion_id} approved")
+
+
+@institution_app.command("show")
+def institution_show(ctx: typer.Context, institution_id: int) -> None:
+    """An institution, by instId."""
+    with _client(ctx) as icpc:
+        render(icpc.send(common_api.institution(institution_id)), _ctx(ctx).output)
+
+
+@institution_app.command("units")
+def institution_units(ctx: typer.Context, institution_id: int) -> None:
+    """The units of an institution, by instId; usually exactly one."""
+    with _client(ctx) as icpc:
+        render(icpc.send(common_api.institution_units(institution_id)), _ctx(ctx).output)
+
+
+@institution_app.command("unit")
+def institution_unit(ctx: typer.Context, unit_id: int) -> None:
+    """An institution unit, by instUnitId."""
+    with _client(ctx) as icpc:
+        render(icpc.send(common_api.institution_unit(unit_id)), _ctx(ctx).output)
+
+
+@institution_app.command("set")
+def institution_set(
+    ctx: typer.Context,
+    institution_id: int,
+    changes: Annotated[list[str], typer.Argument(help="KEY=VALUE, e.g. shortName=MIT.")],
+) -> None:
+    """Change an institution's names or homepage.
+
+        icpc institution set 1145 shortName=MIT homepageUrl=https://web.mit.edu/
+
+    The unit repeats these names; change it too with `set-unit`.
+    """
+    _edit(
+        ctx,
+        "institution",
+        common_api.institution(institution_id),
+        common_api.update_institution,
+        changes,
+    )
+
+
+@institution_app.command("set-unit")
+def institution_set_unit(
+    ctx: typer.Context,
+    unit_id: int,
+    changes: Annotated[list[str], typer.Argument(help="KEY=VALUE; nested as a.b=VALUE.")],
+) -> None:
+    """Change an institution unit, address and social links included.
+
+        icpc institution set-unit 1220 shortName=MIT mailingAddress.city=Cambridge \\
+            socialInfo.twitterName=mit
+    """
+    _edit(
+        ctx,
+        "institution unit",
+        common_api.institution_unit(unit_id),
+        common_api.update_institution_unit,
+        changes,
+    )
 
 
 # ------------------------------------------------------------------- staff --
@@ -715,6 +886,8 @@ def _assignments(pairs: list[str]) -> dict[str, Any]:
             out[key] = None
         elif raw.lstrip("-").isdigit():
             out[key] = int(raw)
+        elif re.fullmatch(r"-?\d+\.\d+", raw):
+            out[key] = float(raw)
         else:
             out[key] = raw.strip('"')
     return out
@@ -724,19 +897,26 @@ def _edit(ctx: typer.Context, label: str, read: Any, write: Any, pairs: list[str
     """Read a settings object, apply ``key=value`` changes, write it back.
 
     These endpoints are full-object replaces, so the read is not optional: send
-    only the changed keys and everything else is wiped.
+    only the changed keys and everything else is wiped. ``a.b=value`` sets a key
+    of a nested object.
     """
     changes = _assignments(pairs)
     with _client(ctx) as icpc:
         current = icpc.send(read)
         obj = current if isinstance(current, dict) else current.model_dump(by_alias=True)
-        unknown = [k for k in changes if k not in obj]
-        if unknown:
-            fail(f"{label} has no field(s) {unknown}; known: {', '.join(sorted(obj))}")
-            raise typer.Exit(1)
-        for key, value in changes.items():
-            note(f"{key}: {obj.get(key)!r} -> {value!r}")
-        icpc.send(write({**obj, **changes}))
+        obj = copy.deepcopy(obj)
+        for path, value in changes.items():
+            *parents, key = path.split(".")
+            target = obj
+            for part in parents:
+                target = target.get(part) if isinstance(target, dict) else None
+            if not isinstance(target, dict) or key not in target:
+                known = sorted(target) if isinstance(target, dict) else []
+                fail(f"{label} has no field {path!r}; known here: {', '.join(known)}")
+                raise typer.Exit(1)
+            note(f"{path}: {target[key]!r} -> {value!r}")
+            target[key] = value
+        icpc.send(write(obj))
         after = icpc.send(read)
     render(after, _ctx(ctx).output)
 

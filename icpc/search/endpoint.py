@@ -37,6 +37,8 @@ class SearchEndpoint[RowT, FieldsT]:
     #: of grids that accept the term and return everything anyway — see
     #: :meth:`validate`.
     filterable: bool = True
+    #: Where ``/export`` lives when it is not ``{path}/export``.
+    export_path: str | None = None
 
     # ------------------------------------------------------------ queries --
 
@@ -168,7 +170,7 @@ class SearchEndpoint[RowT, FieldsT]:
         return model_op(
             Request(
                 "GET",
-                f"{self.path}/export",
+                self.export_path or f"{self.path}/export",
                 params={"q": query.render(), "type": str(export_type)},
                 slow=True,
             ),

@@ -91,7 +91,7 @@ $ icpc person find root@nsychev.ru
 
 $ icpc person find "Sychev" --limit 3      # by name, not just email
 
-$ icpc institution University
+$ icpc institution find University
     id   name                              country   url
   7523   Nazarbayev University             KZ        https://nu.edu.kz/
   7524   St. Petersburg State University   RU        https://spbu.ru/
@@ -110,7 +110,7 @@ $ icpc person show 234567        # the full person profile
 
 ```bash
 icpc staff add 3456 --person $(icpc person find root@nsychev.ru --id) --badge-role Judge
-icpc team register 3456 --name Alpha --institution $(icpc institution "Nazarbayev University" --id)
+icpc team register 3456 --name Alpha --institution $(icpc institution find "Nazarbayev University" --id)
 ```
 
 Make sure to specify full name as it won't work if several entries found.
@@ -398,6 +398,57 @@ string. The four groups map to:
 
 `icpc schema <java.class.Name>` prints the server's own field list and allowed
 values for each, which is the reliable way to see what a field will accept.
+
+---
+
+## institution
+
+Needs a permission to manage institutions.
+
+```bash
+icpc institution search Massachusetts                     # instName contains "Massachusetts"
+icpc institution search --filter countryName#France --limit 100
+icpc institution show 1234                                # by instId
+icpc institution units 1234                               # its units; usually one
+icpc institution unit 5678                                # by instUnitId
+```
+
+```
+$ icpc institution search Massachusetts
+instId	instName	instUnitId	instUnitNativeName	instUnitShortName	instUnitAbbreviation	instUnitHomepageUrl	city	countryName
+1145	Massachusetts Institute of Technology	1220		MIT		https://www.mit.edu/		United States
+```
+
+Edits read the whole object, apply `KEY=VALUE`, and write it back. The unit
+repeats the institution's names, so a rename usually touches both. `a.b=VALUE`
+reaches into a nested object:
+
+```bash
+icpc institution set 1145 shortName="MIT" homepageUrl=https://web.mit.edu/
+icpc institution set-unit 1220 shortName="MIT" mailingAddress.city=Cambridge socialInfo.twitterName=mit
+```
+
+Upload a logo (SVG, JPEG, BMP, PNG or GIF, under 3000 kB) by `instId`:
+
+```bash
+icpc institution set-logo 1145 mit.svg
+```
+
+You can suggest new institution using `create`:
+
+```bash
+icpc institution create "name=Massachusetts Institute of Technology" "shortName=MIT" \
+  homepageUrl=https://web.mit.edu/ institutionUnitType=UNIVERSITY_GRADUATE \
+  "addressLine1=77 Massachusetts Avenue" city=Cambridge state=MA zip=02139 country=US
+```
+
+`country` takes ISO code or a name.
+
+It prints the suggestion's `id` that must be approved by a moderator to create an institution:
+
+```bash
+icpc institution approve 54321
+```
 
 ---
 

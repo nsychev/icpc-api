@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import base64
 import binascii
+from typing import Any
+
+from pydantic import SerializerFunctionWrapHandler, model_serializer
 
 from icpc.models.base import Row
 
@@ -28,6 +31,16 @@ class Country(Row):
     number: int | None = None
     currency: str | None = None
     available: bool | None = None
+    #: Only the frontend's bundled list carries this; the server never sends it.
+    uuid: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _drop_missing_uuid(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Leave out a ``uuid`` the server never sent, so edits send back what they read."""
+        data = handler(self)
+        if data.get("uuid") is None:
+            data.pop("uuid", None)
+        return data
 
 
 class FileRef(Row):

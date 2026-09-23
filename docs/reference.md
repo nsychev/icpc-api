@@ -100,8 +100,8 @@ A contest's questionnaires and the questions they ask.
 
 | Call | Endpoint | Returns | What it does |
 |---|---|---|---|
-| `survey.fields` | `GET /contest/survey/field/{survey_id}/table` | `list[SurveyField]` | A survey's questions, in `fieldOrder`. |
-| `survey.for_contest` | `GET /contest/survey/{contest_id}/table` | `list[Survey]` | Every survey of a contest. Empty for most: surveys are opt-in. |
+| `survey.fields` | `GET /contest/survey/field/{survey_id}/table` | `list[SurveyField]` | A survey's fields, in `fieldOrder`. |
+| `survey.for_contest` | `GET /contest/survey/{contest_id}/table` | `list[Survey]` | Every survey of a contest. |
 | `survey.get` | `GET /contest/survey/{survey_id}` | `Survey` | One survey, by its own id rather than its contest's. |
 
 
@@ -114,7 +114,15 @@ Site-wide values, institution lookup, and the schema registry.
 | `common.schema` | `GET /aspectfaces/{java_class}` | `AspectFacesSchema` | Fetch a server-side form definition. |
 | `common.wf_year` | `GET /common/globals/WFYear` | `int` | The current World Finals year. |
 | `common.globals_` | `GET /common/globals/all` | `Globals` | Site-wide settings: the current World Finals and regionals years. |
+| `common.update_institution` ✎ | `POST /common/institution` | `Institution` | Overwrite an institution's names and homepage. Body: the whole object. |
+| `common.institution` | `GET /common/institution/{institution_id}` | `Institution` | An institution, by the `instId` of the institution search grids. |
+| `common.update_institution_unit` ✎ | `POST /common/institutionunit` | `InstitutionUnit` | Overwrite an institution unit, address and social links included. Body: the whole object. |
+| `common.institution_units` | `GET /common/institutionunit/inst/{institution_id}` | `list[InstitutionUnit]` | The units of an institution; usually exactly one. |
 | `common.institution_suggest` | `GET /common/institutionunit/suggest` | `list[InstitutionSuggestion]` | Look an institution up by name, as the UI's picker does. Query: `name`, `page`, `size`. |
+| `common.institution_unit` | `GET /common/institutionunit/{unit_id}` | `InstitutionUnit` | An institution unit, by the `instUnitId` of the institution search grids. |
+| `common.set_institution_logo` ✎ | `POST /common/logo/institution/{institution_id}` | `None` | Upload an institution's logo, replacing any current one. Body: multipart file. |
+| `common.create_suggested_institution` ✎ | `POST /common/suggestedinstitution/` | `SuggestedInstitution` | Suggest a new institution, as the "can't find my institution" form does. Body: the whole object. |
+| `common.approve_suggested_institution` ✎ | `PUT /common/suggestedinstitution/approve/{suggestion_id}` | `None` | Turn a suggestion from `create_suggested_institution` into an institution. |
 
 
 ## Public

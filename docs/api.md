@@ -336,6 +336,26 @@ icpc.send(contest.add_manager(new.id, 234567))
 icpc.send(contest.delete(new.id))  # deletes the contest
 ```
 
+### Institutions
+
+Needs a permission to manage institutions.
+
+```python
+from icpc.api import common
+from icpc.search import institutions
+
+grid = institutions()
+rows = icpc.all(grid, grid.query(filters=[grid.fields.inst_name.contains("Massach")]))
+
+inst = icpc.send(common.institution(1234))
+icpc.send(common.update_institution({**inst.model_dump(by_alias=True), "shortName": "MIT"}))
+
+unit = icpc.send(common.institution_units(5678))[0]
+body = unit.model_dump(by_alias=True)
+body["mailingAddress"]["city"] = "Cambridge"
+icpc.send(common.update_institution_unit(body))
+```
+
 ## Errors
 
 ```python
