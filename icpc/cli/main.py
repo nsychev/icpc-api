@@ -742,6 +742,51 @@ def contest_set_site(
     )
 
 
+_NEW_SITE_SETTINGS: dict[str, Any] = {
+    "details": "",
+    "allowRegistration": False,
+    "invitationOnly": False,
+    "homepage": "",
+    "additionalInfo": "",
+    "enforceCapacity": False,
+    "allowTeamChanges": False,
+}
+_NEW_SITE_REQUIRED = ("locationName", "capacity", "siteDelivery", "siteType")
+
+
+@contest_app.command("add-site")
+def contest_add_site(
+    ctx: typer.Context,
+    contest_id: int,
+    fields: Annotated[list[str], typer.Argument(help="KEY=VALUE; see below.")],
+) -> None:
+    """Add a site to a contest.
+
+        icpc contest add-site 1235 "name=World Finals" email=manager@icpc.global \
+            locationName=Dubai capacity=150 siteDelivery=ONSITE siteType=NORMAL \
+            allowRegistration=true enforceCapacity=true
+
+    Required: name, email, locationName, capacity, siteDelivery, siteType.
+    Optional: allowRegistration, invitationOnly, enforceCapacity, allowTeamChanges,
+    details, homepage, additionalInfo.
+    """
+    values = _assignments(fields)
+    body: dict[str, Any] = {"name": values.pop("name", None), "email": values.pop("email", None)}
+    missing = [k for k in ("name", "email") if not body[k]]
+    missing += [k for k in _NEW_SITE_REQUIRED if values.get(k) in (None, "")]
+    if missing:
+        raise typer.BadParameter(f"missing {', '.join(missing)}")
+    known = (*_NEW_SITE_REQUIRED, *_NEW_SITE_SETTINGS)
+    unknown = sorted(set(values) - set(known))
+    if unknown:
+        raise typer.BadParameter(
+            f"unknown {', '.join(unknown)}; known: name, email, {', '.join(known)}"
+        )
+    body["siteSettings"] = {**_NEW_SITE_SETTINGS, **values}
+    with _client(ctx) as icpc:
+        render(icpc.send(contest_api.create_site(contest_id, body)), _ctx(ctx).output)
+
+
 @contest_app.command("summary")
 def contest_summary(ctx: typer.Context, contest_id: int) -> None:
     """Team counts by site and by status, from one joined fetch."""

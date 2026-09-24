@@ -379,6 +379,9 @@ icpc contest set 1235 geographicArea="Northern Eurasia" email=me@example.com
 icpc contest set-settings 1235 requireCertification=true showPublicPages=WITH_PEOPLE
 icpc contest set-registration 1235 allowStudentCoach=true maxCoaches=2 maxContestants=3
 icpc contest set-site 1235 --site 3456 allowRegistration=true capacity=50
+icpc contest add-site 1235 "name=World Finals" email=manager@icpc.global \
+    locationName=Dubai capacity=150 siteDelivery=ONSITE siteType=NORMAL \
+    allowRegistration=true enforceCapacity=true
 ```
 
 ```
