@@ -48,6 +48,7 @@ __all__ = [
     "RegistrationInfo",
     "RegistrationStatus",
     "SiteRow",
+    "SiteSettings",
     "SiteTreeNode",
     "StandingRow",
     "SuggestedInstitution",
@@ -401,6 +402,24 @@ class SiteRow(Row):
     invitation_only: bool | None = None
     allow_team_changes: bool | None = None
     enforce_capacity: bool | None = None
+
+
+class SiteSettings(Row):
+    """``siteSettings`` of ``GET /contest/site/{id}``, as ``contest.site_settings`` reads it."""
+
+    id: int | None = None
+    version: int | None = None
+    location_name: str | None = None
+    capacity: int | None = None
+    site_delivery: str | None = None
+    site_type: str | None = None
+    details: str | None = None
+    homepage: str | None = None
+    additional_info: str | None = None
+    allow_registration: bool | None = None
+    invitation_only: bool | None = None
+    enforce_capacity: bool | None = None
+    allow_team_changes: bool | None = None
 
 
 class SiteTreeNode(Row):

@@ -1,4 +1,4 @@
-"""Institutions: the unit's odd wire key, the grid's export path, and the CLI edit."""
+"""Institutions: the unit's odd wire key, the grid's export path, and the CLI edits."""
 
 from __future__ import annotations
 
@@ -75,8 +75,9 @@ def test_the_grid_exports_from_a_sibling_path():
 
 
 class _Fake:
-    def __init__(self) -> None:
+    def __init__(self, reply: Any = None) -> None:
         self.sent: list[Any] = []
+        self.reply = reply
 
     def __enter__(self) -> _Fake:
         return self
@@ -88,7 +89,7 @@ class _Fake:
         if op.request.method == "POST":
             self.sent.append(op.request.json)
             return None
-        return InstitutionUnit.model_validate(UNIT)
+        return self.reply if self.reply is not None else InstitutionUnit.model_validate(UNIT)
 
 
 def test_set_unit_edits_nested_keys_and_sends_the_whole_object(monkeypatch):
@@ -111,6 +112,43 @@ def test_set_unit_edits_nested_keys_and_sends_the_whole_object(monkeypatch):
         {**UNIT, "latitude": 41.5, "mailingAddress": {**UNIT["mailingAddress"], "city": "Tashkent"}}
     ]
     assert common.update_institution_unit({}).request.path == "/common/institutionunit"
+
+
+def test_set_unit_types_values_by_the_model_not_by_their_look(monkeypatch):
+    """`zip` is a string, so its leading zero survives; `latitude` is a float."""
+    fake = _Fake()
+    monkeypatch.setattr(main, "_client", lambda _ctx: fake)
+    result = CliRunner().invoke(
+        main.app, ["institution", "set-unit", "5695", "mailingAddress.zip=010000"]
+    )
+    assert result.exit_code == 0, result.output
+    assert fake.sent[0]["mailingAddress"]["zip"] == "010000"
+
+    result = CliRunner().invoke(main.app, ["institution", "set-unit", "5695", "latitude=north"])
+    assert result.exit_code == 1
+    assert len(fake.sent) == 1
+
+
+def test_set_site_types_a_plain_dict_by_site_settings(monkeypatch):
+    """The read is a dict: typed by SiteSettings, an unmodeled key by its current value."""
+    current = {"id": 1, "capacity": 10, "allowRegistration": False, "futureFlag": False}
+    fake = _Fake(reply=current)
+    monkeypatch.setattr(main, "_client", lambda _ctx: fake)
+    result = CliRunner().invoke(
+        main.app,
+        [
+            "contest",
+            "set-site",
+            "1235",
+            "--site",
+            "1",
+            "capacity=50",
+            "allowRegistration=true",
+            "futureFlag=true",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert fake.sent == [{"id": 1, "capacity": 50, "allowRegistration": True, "futureFlag": True}]
 
 
 def test_set_unit_refuses_an_unknown_nested_key(monkeypatch):

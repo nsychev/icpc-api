@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import copy
 import os
-import re
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -17,6 +16,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from icpc import errors
 from icpc.api import common as common_api
@@ -46,6 +46,7 @@ from icpc.cli.render import OutputFormat, fail, note, render, warn
 from icpc.config import Settings
 from icpc.facade.client import Icpc, Include
 from icpc.models.countries import country
+from icpc.models.entities import SiteSettings
 from icpc.models.enums import ExportType, InstitutionUnitType, MemberRole, TeamStatus
 from icpc.search import _generated as endpoints
 from icpc.search.dsl import Filter, SortKey
@@ -739,6 +740,7 @@ def contest_set_site(
         contest_api.site_settings(site_id),
         lambda o: contest_api.update_site_settings(contest_id, o),
         changes,
+        SiteSettings,
     )
 
 
@@ -782,7 +784,11 @@ def contest_add_site(
         raise typer.BadParameter(
             f"unknown {', '.join(unknown)}; known: name, email, {', '.join(known)}"
         )
-    body["siteSettings"] = {**_NEW_SITE_SETTINGS, **values}
+    try:
+        settings = SiteSettings.model_validate({**_NEW_SITE_SETTINGS, **values})
+    except ValidationError as e:
+        raise typer.BadParameter(_validation_message(e)) from None
+    body["siteSettings"] = settings.model_dump(by_alias=True, exclude_unset=True)
     with _client(ctx) as icpc:
         render(icpc.send(contest_api.create_site(contest_id, body)), _ctx(ctx).output)
 
@@ -914,56 +920,80 @@ def contest_load(
 
 
 def _assignments(pairs: list[str]) -> dict[str, Any]:
-    """Parse ``key=value`` arguments, coercing the obvious literals.
+    """Parse ``key=value`` arguments; ``null`` becomes None, the rest stay strings.
 
-    ``true``/``false``/``null`` and bare numbers become JSON values; everything
-    else stays a string. Wrap a value in quotes to force a string.
+    The caller types them by its model, so ``zip=010000`` keeps its zero while
+    ``capacity=50`` turns into a number.
     """
     out: dict[str, Any] = {}
     for pair in pairs:
         key, sep, raw = pair.partition("=")
         if not sep:
             raise typer.BadParameter(f"expected KEY=VALUE, got {pair!r}")
-        low = raw.lower()
-        if low in ("true", "false"):
-            out[key] = low == "true"
-        elif low in ("null", "none"):
-            out[key] = None
-        elif raw.lstrip("-").isdigit():
-            out[key] = int(raw)
-        elif re.fullmatch(r"-?\d+\.\d+", raw):
-            out[key] = float(raw)
-        else:
-            out[key] = raw.strip('"')
+        out[key] = None if raw.lower() in ("null", "none") else raw
     return out
 
 
-def _edit(ctx: typer.Context, label: str, read: Any, write: Any, pairs: list[str]) -> None:
+def _validation_message(e: ValidationError) -> str:
+    return "; ".join(f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in e.errors())
+
+
+def _edit(
+    ctx: typer.Context,
+    label: str,
+    read: Any,
+    write: Any,
+    pairs: list[str],
+    model: type[BaseModel] | None = None,
+) -> None:
     """Read a settings object, apply ``key=value`` changes, write it back.
 
     These endpoints are full-object replaces, so the read is not optional: send
     only the changed keys and everything else is wiped. ``a.b=value`` sets a key
     of a nested object.
+
+    Values are typed by ``model``, by default the model ``read`` returns. A field
+    the model doesn't declare takes the type of its current value, or stays a
+    string if that is null.
     """
     changes = _assignments(pairs)
     with _client(ctx) as icpc:
         current = icpc.send(read)
-        obj = current if isinstance(current, dict) else current.model_dump(by_alias=True)
-        obj = copy.deepcopy(obj)
-        for path, value in changes.items():
-            *parents, key = path.split(".")
-            target = obj
-            for part in parents:
-                target = target.get(part) if isinstance(target, dict) else None
-            if not isinstance(target, dict) or key not in target:
-                known = sorted(target) if isinstance(target, dict) else []
-                fail(f"{label} has no field {path!r}; known here: {', '.join(known)}")
-                raise typer.Exit(1)
-            note(f"{path}: {target[key]!r} -> {value!r}")
-            target[key] = value
+        if isinstance(current, BaseModel):
+            model = model or type(current)
+            current = current.model_dump(by_alias=True)
+        obj = copy.deepcopy(current)
+        try:
+            for path, value in changes.items():
+                *parents, key = path.split(".")
+                target = obj
+                for part in parents:
+                    target = target.get(part) if isinstance(target, dict) else None
+                if not isinstance(target, dict) or key not in target:
+                    known = sorted(target) if isinstance(target, dict) else []
+                    fail(f"{label} has no field {path!r}; known here: {', '.join(known)}")
+                    raise typer.Exit(1)
+                old = target[key]
+                if value is not None and isinstance(old, bool | int | float):
+                    target[key] = TypeAdapter(type(old)).validate_python(value)
+                else:
+                    target[key] = value
+            if model is not None:
+                obj = model.model_validate(obj).model_dump(by_alias=True, exclude_unset=True)
+        except ValidationError as e:
+            fail(f"bad value for {label}: {_validation_message(e)}")
+            raise typer.Exit(1) from None
+        for path in changes:
+            note(f"{path}: {_at(current, path)!r} -> {_at(obj, path)!r}")
         icpc.send(write(obj))
         after = icpc.send(read)
     render(after, _ctx(ctx).output)
+
+
+def _at(obj: Any, path: str) -> Any:
+    for part in path.split("."):
+        obj = obj[part]
+    return obj
 
 
 def _grid(name: str, entity_id: int) -> SearchEndpoint[Any, Any]:
