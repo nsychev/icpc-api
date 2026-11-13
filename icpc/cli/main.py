@@ -32,6 +32,7 @@ from icpc.auth.cognito import Challenge
 from icpc.auth.flows import CognitoAuth
 from icpc.auth.store import CredentialStore
 from icpc.cli.columns import (
+    COACH,
     JOIN,
     ROSTERS,
     RowKind,
@@ -857,7 +858,8 @@ def contest_load(
 
     `--col NAME=PATH` names a column; a bare `--col PATH` keeps the grid's own
     name. A path may index a roster — `coaches`, `contestants`, `other`,
-    `members` — or step into `institution`, `participant` and `extras`.
+    `extraMembers`, `members` — or step into `coach`, `institution`, `participant`
+    and `extras`.
 
     `[{i}]` repeats a column across a list, `{n}` being the 1-based counter for
     the header:
@@ -881,7 +883,7 @@ def contest_load(
     if fields:
         # Read off the models, so this answers without fetching the contest.
         if rows is RowKind.TEAMS:
-            note(f"the roster fields work under any of: {', '.join(ROSTERS)}")
+            note(f"the roster fields work under any of: {', '.join((*ROSTERS, COACH))}")
         render(fields_of(rows), _ctx(ctx).output, columns=["path", "from"])
         return
     if contest_id is None:

@@ -44,19 +44,18 @@ TEAMS = [
     "status",
     "eligibilityStatus",
     "eligibilityIssue",
-    "C.First=coaches[0].firstName",
-    "C.Last=coaches[0].lastName",
-    "C.Id=coaches[0].username",
+    "C.First=coach.firstName",
+    "C.Last=coach.lastName",
+    "C.Id=coach.username",
     "C{n}.First=contestants[{i}].firstName",
     "C{n}.Last=contestants[{i}].lastName",
     "C{n}.Id=contestants[{i}].username",
-    "O{n}.Role=other[{i}].role",
-    "O{n}.First=other[{i}].firstName",
-    "O{n}.Last=other[{i}].lastName",
-    "O{n}.Id=other[{i}].username",
-    "instAddress",
+    "O{n}.Role=extraMembers[{i}].role",
+    "O{n}.First=extraMembers[{i}].firstName",
+    "O{n}.Last=extraMembers[{i}].lastName",
+    "O{n}.Id=extraMembers[{i}].username",
 ]
-WIDTHS = {"contestants": 3, "other": 5}
+WIDTHS = {"contestants": 3, "extraMembers": 5}
 
 #: One row per person. `[*]` joins a list into one cell, which is what makes
 #: TeamIds and Onsite possible: they are per-membership facts about a person.
@@ -77,28 +76,28 @@ PEOPLE = [
 ]
 
 INSTITUTIONS = [
-    "Country=countryName",
+    "InstId=instId",
+    "InstName=instName",
+    "InstShortName=instUnitShortName",
+    "InstNativeName=instNativeName",
     "Type=instUnitType",
+    "AddressLine1=addressLine1",
+    "AddressLine2=addressLine2",
+    "AddressLine3=addressLine3",
+    "City=city",
+    "State=state",
+    "Zip=zip",
+    "Country=countryName",
+    "Longitude=longitude",
+    "Latitude=latitude",
+    "UnitId=instUnitId",
     "UnitName=instUnitName",
     "UnitShortName=instUnitShortName",
+    "UnitNativeName=instUnitNativeName",
     "Url=instHomepageUrl",
+    "FacebookPage=facebookPage",
     "TwitterName=twitterName",
     "TwitterHash=twitterHash",
-    "InstName=instName",
-    "InstAbbr=instUnitShortName",
-    "InstUnitId=instUnitId",
-    "InstId=instId",
-    "City=city",
-    "InstNativeName=instNativeName",
-    "instUnitNativeName=instUnitNativeName",
-    "addressLine1=addressLine1",
-    "addressLine2=addressLine2",
-    "addressLine3=addressLine3",
-    "state=state",
-    "zip=zip",
-    "longitude=longitude",
-    "latitude=latitude",
-    "facebookPage=facebookPage",
 ]
 
 SHEETS: list[tuple[str, RowKind, list[str], dict[str, int]]] = [

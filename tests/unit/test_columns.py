@@ -61,6 +61,9 @@ def test_rosters_are_split_by_role():
 def test_paths_reach_rosters_and_the_institution():
     assert pluck(ROWS[0], "name") == "Alpha"
     assert pluck(ROWS[0], "coaches[0].firstName") == "Bo"
+    assert pluck(ROWS[0], "coach.firstName") == "Bo"
+    assert pluck(ROWS[1], "coach.firstName") is None
+    assert pluck(ROWS[0], "extraMembers[0].firstName") == "Cy"
     assert pluck(ROWS[0], "institution.instName") == "NU"
     assert pluck(ROWS[0], "contestants[-1].lastName") == "Lee"
 
@@ -276,6 +279,8 @@ def test_validation_follows_the_row_kind():
         # The team row's own blob names the roster, so ids, usernames and roles
         # cost nothing extra.
         ("coaches[0].username", {"teams"}),
+        ("coach.username", {"teams"}),
+        ("coach.firstName", {"teams", "members"}),
         ("contestants[*].personId", {"teams"}),
         # Anything else about a member means the teammember table.
         ("coaches[0].firstName", {"teams", "members"}),

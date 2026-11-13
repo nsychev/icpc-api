@@ -221,15 +221,15 @@ Advanced example:
 icpc -o csv contest load 1234 \
   --col id --col site --col instName --col name --col status \
   --col eligibilityStatus --col eligibilityIssue \
-  --col C.First='coaches[0].firstName' --col C.Last='coaches[0].lastName' \
-  --col C.Id='coaches[0].username' \
+  --col C.First='coach.firstName' --col C.Last='coach.lastName' \
+  --col C.Id='coach.username' \
   --col 'C{n}.First=contestants[{i}].firstName' \
   --col 'C{n}.Last=contestants[{i}].lastName' \
   --col 'C{n}.Id=contestants[{i}].username' \
-  --col 'O{n}.Role=other[{i}].role' --col 'O{n}.First=other[{i}].firstName' \
-  --col 'O{n}.Last=other[{i}].lastName' --col 'O{n}.Id=other[{i}].username' \
+  --col 'O{n}.Role=extraMembers[{i}].role' --col 'O{n}.First=extraMembers[{i}].firstName' \
+  --col 'O{n}.Last=extraMembers[{i}].lastName' --col 'O{n}.Id=extraMembers[{i}].username' \
   --col instAddress \
-  --repeat contestants=3 --repeat other=5 > teams.csv
+  --repeat contestants=3 --repeat extraMembers=5 > teams.csv
 $ head -1 teams.csv
 id,site,instName,name,status,eligibilityStatus,eligibilityIssue,C.First,C.Last,
 C.Id,C1.First,C1.Last,C1.Id,C2.First,C2.Last,C2.Id,C3.First,C3.Last,C3.Id,

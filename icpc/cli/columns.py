@@ -30,6 +30,8 @@ from icpc.models._generated import (
 from icpc.models.entities import Contest
 
 __all__ = [
+    "COACH",
+    "ROSTERS",
     "RowKind",
     "apply_columns",
     "fields_of",
@@ -100,6 +102,8 @@ def _team(team: Team, context: dict[str, Any] | None = None) -> dict[str, Any]:
     row["coaches"] = [_member(m) for m in team.coaches]
     row["contestants"] = [_member(m) for m in team.contestants]
     row["other"] = [_member(m) for m in team.other]
+    row["extraMembers"] = [_member(m) for m in team.extra_members]
+    row["coach"] = _member(team.coach) if team.coach else {}
     row["institution"] = _dump(team.institution)
     row["extras"] = team.extras
     context = context or {}
@@ -189,9 +193,8 @@ def _team_ref(team: Team, context: dict[str, Any] | None = None) -> dict[str, An
     }
 
 
-#: The four roster lists on a team row. They hold the same fields; which
-#: members land in each is the only difference.
-ROSTERS = ("members", "coaches", "contestants", "other")
+ROSTERS = ("members", "coaches", "contestants", "other", "extraMembers")
+COACH = "coach"
 
 
 class Open:
@@ -260,6 +263,7 @@ def shape_of(kind: RowKind) -> Fields:
             "contest": _from_model(Contest),
             "institution": _from_model(InstitutionRow),
             **{roster: ListOf(_member_shape()) for roster in ROSTERS},
+            COACH: _member_shape(),
         }
     if kind is RowKind.MEMBERS:
         return {**_member_shape(), "team": _team_ref_shape(), "contest": _from_model(Contest)}
@@ -292,10 +296,8 @@ def fields_of(kind: RowKind) -> list[dict[str, str]]:
             paths.append(prefix.rstrip("."))
             return
         for key, value in shape.items():
-            # The other three rosters hold identical fields, and `participant`
-            # repeats a table listed in full elsewhere: spelling either out
-            # would quadruple the listing without saying anything new.
-            if prefix == "" and key in ROSTERS[1:]:
+            # All these rosters hold identical fields, don't duplicate them.
+            if prefix == "" and key in (*ROSTERS[1:], COACH):
                 continue
             if key == "participant":
                 paths.append(f"{prefix}participant.<participant field>")
@@ -346,7 +348,7 @@ def source_of(kind: RowKind, path: str) -> str:
     for step in steps:
         if step in _NEEDS:
             return _NEEDS[step]
-    if steps[0] in ROSTERS:
+    if steps[0] in (*ROSTERS, COACH):
         # The embedded blob covers a roster of ids, usernames and roles; a real
         # name or a shirt size means the teammember table.
         return "teams" if set(steps[1:]) <= BLOB_FIELDS else "members"

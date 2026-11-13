@@ -55,6 +55,25 @@ def test_student_coach_counts_as_both_contestant_and_coach():
     assert [m.role for m in team.coaches] == [MemberRole.COACH, MemberRole.STUDENT_COACH]
 
 
+def test_extra_members_are_everyone_but_the_contestants_and_the_main_coach():
+    rows = [
+        {"teamId": 1, "personId": 1, "role": "COCOACH"},
+        {"teamId": 1, "personId": 2, "role": "CONTESTANT_COACH"},
+        {"teamId": 1, "personId": 3, "role": "COCOACH"},
+        {"teamId": 1, "personId": 4, "role": "RESERVE"},
+    ]
+    members = [TeamMemberRow.model_validate(row) for row in rows]
+    team = join(TEAMS, members=members).teams[0]
+    # Listed after a co-coach, but still the coach: the role decides, not the order.
+    assert team.coach.person_id == 2
+    assert [m.person_id for m in team.extra_members] == [1, 3, 4]
+    # With only co-coaches the first stands in, and is not an extra member either.
+    team = join(TEAMS, members=[members[0], members[2]]).teams[0]
+    assert team.coach.person_id == 1
+    assert [m.person_id for m in team.extra_members] == [3]
+    assert join(TEAMS).teams[1].coach is None
+
+
 def test_roster_falls_back_to_the_embedded_blob_when_members_were_not_fetched():
     view = join(TEAMS)
     assert [m.person_id for m in view.teams[0].members] == [11]

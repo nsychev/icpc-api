@@ -29,7 +29,7 @@ from icpc.models.base import Row
 from icpc.models.blobs import TeamMemberBlob
 from icpc.models.common import NamedRef
 from icpc.models.entities import Contest
-from icpc.models.enums import TeamStatus, coach_roles, contestant_roles
+from icpc.models.enums import MemberRole, TeamStatus, coach_roles, contestant_roles
 from icpc.models.surveys import SurveyResponseRow, merge_answers
 
 __all__ = ["ContestView", "Member", "Team", "join"]
@@ -72,29 +72,35 @@ class Team(TeamRow):
 
     @property
     def contestants(self) -> list[Member]:
-        """Members who compete.
-
-        ``STUDENT_COACH`` and ``CONTESTANT_COACH`` appear here *and* in
-        :attr:`coaches` — they hold both roles, and the ICPC UI counts them twice.
-        """
+        """Competing team members."""
         roles = contestant_roles()
         return [m for m in self.members if m.role in roles]
 
     @property
     def coaches(self) -> list[Member]:
-        """Members who coach. Overlaps :attr:`contestants`; see there."""
+        """Coach and co-coaches, including contestant coach."""
         roles = coach_roles()
         return [m for m in self.members if m.role in roles]
 
     @property
     def other(self) -> list[Member]:
-        """Members who neither compete nor coach: reserves, attendees, staff.
-
-        The complement of :attr:`contestants` and :attr:`coaches` together, so a
-        contestant coach is not in here despite holding two roles.
-        """
+        """Members who neither compete nor coach."""
         roles = contestant_roles() | coach_roles()
         return [m for m in self.members if m.role not in roles]
+
+    @property
+    def coach(self) -> Member | None:
+        """The main coach of a team, including contestant coach."""
+        coaches = self.coaches
+        return next((m for m in coaches if m.role != MemberRole.COCOACH), next(iter(coaches), None))
+
+    @property
+    def extra_members(self) -> list[Member]:
+        """Everyone who is neither a contestant nor :attr:`coach`.
+
+        This field includes co-coaches."""
+        coach, roles = self.coach, contestant_roles()
+        return [m for m in self.coaches if m is not coach and m.role not in roles] + self.other
 
 
 @dataclass(slots=True)

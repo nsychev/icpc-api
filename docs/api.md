@@ -165,6 +165,8 @@ team.id, team.name, team.status, team.site   # , ...: team own attributes
 
 team.members                                 # list[Member] — all team members
 team.contestants, team.coaches, team.other   # members split by role
+team.coach                                   # Member | None — the main coach
+team.extra_members                           # co-coaches and `other`
 team.institution                             # InstitutionRow | None
 team.extras                                  # {field: response}
 ```
