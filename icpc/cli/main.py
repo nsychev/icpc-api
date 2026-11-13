@@ -7,6 +7,7 @@ client exists.
 from __future__ import annotations
 
 import copy
+import logging
 import os
 import sys
 from collections.abc import Sequence
@@ -131,7 +132,17 @@ def main(
         str | None,
         typer.Option("--user", "-u", envvar="ICPC_USERNAME", help="Which cached account to use."),
     ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose logging.",
+        ),
+    ] = False,
 ) -> None:
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(name)s %(message)s")
     ctx.obj = Context(output=output, username=username)
 
 

@@ -24,7 +24,7 @@ DEFAULT_PAGE_SIZE = 1000
 
 
 def _default_timeout() -> httpx.Timeout:
-    return httpx.Timeout(connect=5.0, read=30.0, write=30.0, pool=5.0)
+    return httpx.Timeout(connect=2.0, read=30.0, write=30.0, pool=5.0)
 
 
 @dataclass(frozen=True, slots=True)

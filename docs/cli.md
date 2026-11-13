@@ -8,6 +8,7 @@ Use these options before the subcommand:
 |---|---|
 | `-o, --output table\|json\|ndjson\|csv\|tsv` | Output format. Defaults to `table` on a terminal, `json` in a pipe. |
 | `-u, --user EMAIL` | Which cached account to use. Defaults to the one from `auth use` / the last login. |
+| `-v, --verbose` | Enable verbose logging. |
 
 ## auth
 

@@ -191,12 +191,20 @@ def test_bulk_update_sends_the_documented_body():
     assert b'"teamIds":[1,2]' in seen[0].replace(b" ", b"")
 
 
-def test_timeouts_become_transport_errors():
+def test_connect_timeout_is_retried_then_fails_even_for_writes():
+    calls = 0
+
     def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
         raise httpx.ConnectTimeout("too slow")
 
-    with pytest.raises(errors.TransportError):
-        transport(handler).send(contest_api.get(9180))
+    settings = Settings(backoff_base=0.0)
+    for operation in (contest_api.get(9180), team_api.promote(1107579, 38055)):
+        calls = 0
+        with pytest.raises(errors.TransportError):
+            transport(handler, settings=settings).send(operation)
+        assert calls == settings.max_attempts
 
 
 def test_an_empty_200_body_is_reported_as_not_found():

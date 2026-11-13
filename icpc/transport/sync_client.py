@@ -68,7 +68,10 @@ class Transport:
                         timeout=self._timeout(request.slow),
                     )
             except httpx.TimeoutException as exc:
-                if request.idempotent and attempt + 1 < self.settings.max_attempts:
+                # A connect timeout sent nothing, so it is safe to retry even for writes.
+                if (
+                    request.idempotent or isinstance(exc, httpx.ConnectTimeout)
+                ) and attempt + 1 < self.settings.max_attempts:
                     time.sleep(retry_delay(attempt, self.settings))
                     attempt += 1
                     continue
