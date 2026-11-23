@@ -98,6 +98,34 @@ def suggest(name: str, *, page: int = 1, size: int = 10) -> Operation[list[Perso
     )
 
 
+def create_suggested_person(
+        username: str,
+        first_name: str,
+        last_name: str,
+        title: str,
+        sex: str | None = None,
+) -> Operation[PersonSuggestion]:
+    """Register a person, as the "Register new person" form does.
+
+    Required: ``username``, ``first_name``, ``last_name``, ``title``
+    Optional: ``sex``
+    """
+    user = {
+        "username": username,
+        "firstName": first_name,
+        "lastName": last_name,
+        "title": title
+    }
+
+    if sex is not None:
+        user["sex"] = sex
+
+    return model_op(
+        Request("POST", "/person/registration/registerviasuggest", json=user),
+        PersonSuggestion
+    )
+
+
 class ReferenceRole(StrEnum):
     """Roles a person can hold in a contest, as ``/person/references`` spells them."""
 
