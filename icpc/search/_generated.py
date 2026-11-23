@@ -240,6 +240,7 @@ type ContestParticipantField = Literal[
     "staffSites",
     "staffSitesOut",
     "labels",
+    "shippingAddressCountry",
 ]
 
 
@@ -310,7 +311,7 @@ class ContestParticipantFields:
     team_ids: Field[ContestParticipantRow, str] = Field("teamIds")
     team_ids_out: Field[ContestParticipantRow, str] = Field("teamIdsOut")
     teams: Field[ContestParticipantRow, str] = Field("teams")
-    teams_list: Field[ContestParticipantRow, str] = Field("teamsList")
+    teams_list: Field[ContestParticipantRow, list[dict]] = Field("teamsList")
     team_roles: Field[ContestParticipantRow, str] = Field("teamRoles")
     team_roles_out: Field[ContestParticipantRow, str] = Field("teamRolesOut")
     team_sites: Field[ContestParticipantRow, str] = Field("teamSites")
@@ -322,6 +323,7 @@ class ContestParticipantFields:
     staff_sites: Field[ContestParticipantRow, str] = Field("staffSites")
     staff_sites_out: Field[ContestParticipantRow, str] = Field("staffSitesOut")
     labels: Field[ContestParticipantRow, str] = Field("labels")
+    shipping_address_country: Field[ContestParticipantRow, str] = Field("shippingAddressCountry")
 
     #: Columns the icpc.global grid projects by default.
     default_proj: tuple[str, ...] = (
@@ -412,6 +414,7 @@ class ContestParticipantFields:
         "staffSites",
         "staffSitesOut",
         "labels",
+        "shippingAddressCountry",
     )
 
 
@@ -961,6 +964,7 @@ type TeamMemberField = Literal[
     "teamInstShortName",
     "siteId",
     "siteName",
+    "homeCountry",
 ]
 
 
@@ -1006,6 +1010,7 @@ class TeamMemberFields:
     team_inst_short_name: Field[TeamMemberRow, str] = Field("teamInstShortName")
     site_id: Field[TeamMemberRow, int] = Field("siteId")
     site_name: Field[TeamMemberRow, str] = Field("siteName")
+    home_country: Field[TeamMemberRow, str] = Field("homeCountry")
 
     #: Columns the icpc.global grid projects by default.
     default_proj: tuple[str, ...] = (
@@ -1063,6 +1068,7 @@ class TeamMemberFields:
         "teamInstShortName",
         "siteId",
         "siteName",
+        "homeCountry",
     )
 
 
@@ -1092,6 +1098,8 @@ type TeamField = Literal[
     "site",
     "createdWhen",
     "extraField",
+    "instCity",
+    "instCountry",
 ]
 
 
@@ -1122,6 +1130,8 @@ class TeamFields:
     site: Field[TeamRow, str] = Field("site")
     created_when: Field[TeamRow, datetime | str] = Field("createdWhen")
     extra_field: Field[TeamRow, str] = Field("extraField")
+    inst_city: Field[TeamRow, str] = Field("instCity")
+    inst_country: Field[TeamRow, str] = Field("instCountry")
 
     #: Columns the icpc.global grid projects by default.
     default_proj: tuple[str, ...] = (
@@ -1162,6 +1172,8 @@ class TeamFields:
         "site",
         "createdWhen",
         "extraField",
+        "instCity",
+        "instCountry",
     )
 
 

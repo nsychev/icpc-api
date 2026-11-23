@@ -162,7 +162,7 @@ class ContestParticipantRow(Row):
     team_ids: str | None = _Field(default=None, description="Team IDs")
     team_ids_out: str | None = None
     teams: str | None = _Field(default=None, description="Teams")
-    teams_list: str | None = None
+    teams_list: list[dict] | None = None
     team_roles: str | None = _Field(default=None, description="Team Roles")
     team_roles_out: str | None = None
     team_sites: str | None = _Field(default=None, description="Team Sites")
@@ -174,6 +174,7 @@ class ContestParticipantRow(Row):
     staff_sites: str | None = _Field(default=None, description="Staff Sites")
     staff_sites_out: str | None = None
     labels: str | None = _Field(default=None, description="Labels")
+    shipping_address_country: str | None = None
 
 
 class InstitutionRow(Row):
@@ -422,6 +423,7 @@ class TeamMemberRow(HasExtraFields, Row):
     )
     site_id: int | None = None
     site_name: str | None = _Field(default=None, description="Site")
+    home_country: str | None = None
 
 
 class TeamRow(HasTeamMembers, HasExtraFields, Row):
@@ -462,6 +464,8 @@ class TeamRow(HasTeamMembers, HasExtraFields, Row):
         default=None, union_mode="left_to_right", description="Created When"
     )
     extra_field: str | None = _Field(default=None, description="Extra Field")
+    inst_city: str | None = None
+    inst_country: str | None = None
 
 
 class TeamSummaryRow(Row):

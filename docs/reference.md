@@ -148,17 +148,17 @@ because six of these answer 500 when asked for their full field set.
 | `search.site_team_certificates` | `GET /contest/certificate/site/team/site/{site_id}/search` | `CertificateRow` | 17 | `id`, `email`, `name`, `siteName`, `contestName`, … (9) |
 | `search.contest_staff_certificates` | `GET /contest/certificate/staff/contest/{contest_id}/search` | `CertificateRow` | 17 | `id`, `email`, `name`, `siteName`, `contestName`, … (9) |
 | `search.contest_team_certificates` | `GET /contest/certificate/team/contest/{contest_id}/search` | `CertificateRow` | 17 | `id`, `email`, `name`, `siteName`, `contestName`, … (9) |
-| `search.contest_participants` | `GET /contest/search/contest/{contest_id}/contestparticipant` | `ContestParticipantRow` | 72 | `username`, `title`, `sex`, `dob`, `labels`, … (11) |
+| `search.contest_participants` | `GET /contest/search/contest/{contest_id}/contestparticipant` | `ContestParticipantRow` | 73 | `username`, `title`, `sex`, `dob`, `labels`, … (11) |
 | `search.contest_institutions` | `GET /contest/search/contest/{contest_id}/institution` | `InstitutionRow` | 25 | `instId`, `instName`, `instUnitId`, `instUnitNativeName`, `instUnitShortName`, … (13) |
 | `search.contest_staff` | `GET /contest/search/contest/{contest_id}/staff` | `StaffRow` | 19 | `username`, `firstName`, `lastName`, `roles`, `phone`, … (7) |
-| `search.contest_teams` | `GET /contest/search/contest/{contest_id}/team` | `TeamRow` | 24 | `id`, `name`, `status`, `certified`, `instName`, … (9) |
-| `search.contest_team_members` | `GET /contest/search/contest/{contest_id}/teammember` | `TeamMemberRow` | 39 | `username`, `firstName`, `lastName`, `localName`, `teamInstName`, … (11) |
+| `search.contest_teams` | `GET /contest/search/contest/{contest_id}/team` | `TeamRow` | 26 | `id`, `name`, `status`, `certified`, `instName`, … (9) |
+| `search.contest_team_members` | `GET /contest/search/contest/{contest_id}/teammember` | `TeamMemberRow` | 40 | `username`, `firstName`, `lastName`, `localName`, `teamInstName`, … (11) |
 | `search.contest_top20` | `GET /contest/search/contest/{contest_id}/top20` | `Top20Row` | 14 | `area`, `contest`, `contestId`, `rank`, `team`, … (14) |
-| `search.site_participants` | `GET /contest/search/site/{site_id}/contestparticipant` | `ContestParticipantRow` | 72 | `username`, `title`, `sex`, `dob`, `labels`, … (11) |
+| `search.site_participants` | `GET /contest/search/site/{site_id}/contestparticipant` | `ContestParticipantRow` | 73 | `username`, `title`, `sex`, `dob`, `labels`, … (11) |
 | `search.site_home_teams` | `GET /contest/search/site/{site_id}/home/teams` | `TeamSummaryRow` | 22 | `teamId`, `teamName`, `rank`, `siteName`, `country`, … (15) |
 | `search.site_institutions` | `GET /contest/search/site/{site_id}/institutions` | `InstitutionRow` | 25 | `instId`, `instName`, `instUnitId`, `instUnitNativeName`, `instUnitShortName`, … (13) |
-| `search.site_team_members` | `GET /contest/search/site/{site_id}/teammember` | `TeamMemberRow` | 39 | `username`, `firstName`, `lastName`, `localName`, `teamInstName`, … (11) |
-| `search.site_teams` | `GET /contest/search/site/{site_id}/teams` | `TeamRow` | 24 | `id`, `name`, `status`, `certified`, `instName`, … (9) |
+| `search.site_team_members` | `GET /contest/search/site/{site_id}/teammember` | `TeamMemberRow` | 40 | `username`, `firstName`, `lastName`, `localName`, `teamInstName`, … (11) |
+| `search.site_teams` | `GET /contest/search/site/{site_id}/teams` | `TeamRow` | 26 | `id`, `name`, `status`, `certified`, `instName`, … (9) |
 | `search.site_coach_tshirts` | `GET /contest/search/site/{site_id}/tshirt/coaches` | `TshirtRow` | 4 | `personName`, `tshirtSize`, `institution`, `teamName` |
 | `search.site_cocoach_tshirts` | `GET /contest/search/site/{site_id}/tshirt/cocoaches` | `TshirtRow` | 4 | `personName`, `tshirtSize`, `institution`, `teamName` |
 | `search.site_contestant_tshirts` | `GET /contest/search/site/{site_id}/tshirt/contestants` | `TshirtRow` | 4 | `personName`, `tshirtSize`, `institution`, `teamName` |
